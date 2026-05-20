@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+: "${PICARD_JAR:=/opt/picard/picard.jar}"
+: "${PICARD_JAVA_XMX:=2g}"
+
+exec java -Djava.awt.headless=true -Xmx"${PICARD_JAVA_XMX}" -jar "${PICARD_JAR}" "$@"
