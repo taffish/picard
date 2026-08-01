@@ -10,15 +10,15 @@ sequencing data and formats such as FASTQ, SAM, BAM, CRAM, and VCF.
 | --- | --- |
 | name | `picard` |
 | command | `taf-picard` |
-| version | `3.4.0-r1` |
+| version | `3.5.0-r1` |
 | kind | `tool` |
-| container | `ghcr.io/taffish/picard:3.4.0-r1` |
-| upstream | Picard `3.4.0` |
-| runtime version | `Version:3.4.0` from a concrete Picard tool such as `FastqToSam --version`; jar manifest also reports `Implementation-Version: 3.4.0` and `htsjdk-Version: 4.2.0` |
+| container | `ghcr.io/taffish/picard:3.5.0-r1` |
+| upstream | Picard `3.5.0` |
+| runtime version | `Version:3.5.0` from a concrete Picard tool such as `FastqToSam --version`; jar manifest also reports `Implementation-Version: 3.5.0` and `htsjdk-Version: 5.0.0` |
 
 ## What This App Provides
 
-This app packages the official Picard `3.4.0` release jar, pinned by SHA256.
+This app packages the official Picard `3.5.0` release jar, pinned by SHA256.
 The image includes:
 
 - `picard`, a small launcher for the official upstream `picard.jar`;
@@ -27,7 +27,21 @@ The image includes:
   `MeanQualityByCycle`, `QualityScoreDistribution`, and
   `CollectInsertSizeMetrics`;
 - the self-contained Java dependencies bundled inside the upstream release
-  jar, including HTSJDK `4.2.0`.
+  jar, including HTSJDK `5.0.0`.
+
+Picard 3.5.0 upgrades HTSJDK from 4.2.0 to 5.0.0. This adds full CRAM 3.1
+write support and faster BAM/CRAM I/O, fixes flow-based and physical-location
+duplicate marking, and includes fixes for `FilterVcf`, fingerprinting,
+`RevertSam`, and several metrics tools. Upstream also removed direct `.sra`
+input support and retained the Java 17 requirement.
+
+## Reproducibility
+
+- Upstream tag commit: `a53d7ebd975606b79ca0eaddb7bf93f555ec4db4`.
+- Official release JAR SHA256:
+  `b7d97861c3a54ba5a421f5a317f38382f955803862d30ef4aca2bcdc54943631`.
+- The image records the upstream version, commit, JAR digest, and HTSJDK
+  version in `/opt/picard/TAFFISH-SOURCE.txt`.
 
 ## Usage
 
@@ -106,7 +120,7 @@ This is a normal TAFFISH tool app with command mode enabled. The TAFFISH entry
 is intentionally thin:
 
 ```taf
-<taf-app:container:ghcr.io/taffish/picard:3.4.0-r1>
+<taf-app:container:ghcr.io/taffish/picard:3.5.0-r1>
 picard ::*ARGV*::
 ```
 
@@ -144,13 +158,19 @@ many tools. The examples here use the traditional Picard `KEY=value` style
 because it remains common in existing pipelines and avoids ambiguity with the
 TAFFISH wrapper option layer.
 
+Picard 3.5.0 writes CRAM 3.1 by default. Readers limited to CRAM 3.0 cannot
+open those outputs. Check downstream compatibility before exchanging CRAM
+files; when CRAM 3.0 is required, convert explicitly with a compatible tool
+that exposes format-version selection, such as `samtools view -O
+cram,version=3.0` through `taf-samtools`.
+
 ## Platform Notes
 
 The image is intended for native `linux/amd64` and `linux/arm64` builds.
-Picard is distributed as a Java jar. Some bundled Intel GKL native acceleration
-libraries are architecture-specific and may fall back to Java implementations
-on unsupported host architectures; the packaged functional paths remain
-available.
+Picard is distributed as a Java jar. HTSJDK 5.0.0 includes native
+`jlibdeflate` support for both Linux architectures, while some bundled Intel
+GKL acceleration libraries remain architecture-specific and may fall back to
+Java implementations. The packaged functional paths remain available.
 
 ## Boundaries
 
@@ -161,33 +181,41 @@ credentials, the upstream `cloudJar` / `picardcloud.jar` variant, or external
 workflow logic. Picard tools that require those resources still need
 user-supplied local files or a separate purpose-built environment.
 
+Picard 3.5.0 no longer accepts `.sra` input. Convert SRA accessions or files to
+FASTQ first with `taf-sra-tools`, then pass those FASTQ files to Picard. The
+standard JAR includes upstream GAR-reading code, but GAR/cloud-provider and
+credential workflows are not exercised by the offline smoke suite.
+
 The smoke tests verify container wiring, version binding, program-list help,
 representative tool help, FASTA dictionary generation, FASTQ to BAM conversion,
-BAM to FASTQ conversion, and an R-backed quality-chart path. They do not
-validate production-scale performance, every Picard tool, every input format,
-Google Cloud path-provider behavior, or scientific correctness on real
-sequencing datasets.
+BAM to FASTQ conversion, an R-backed quality-chart path, and CRAM 3.1 writing
+and reading. They do not validate production-scale performance, every Picard
+tool, every input format, GAR/Google Cloud path-provider behavior, or
+scientific correctness on real sequencing datasets.
 
 ## Smoke Coverage
 
 The app smoke metadata checks:
 
-- `picard`, `java`, `Rscript`, and `sh` exist;
-- concrete Picard tools report `Version:3.4.0`;
+- `picard`, `java`, `Rscript`, `od`, and `sh` exist;
+- concrete Picard tools report `Version:3.5.0` and the JAR/provenance checks
+  match the pinned 3.5.0 release;
 - the Picard program list includes representative tools;
 - help is reachable for read, reference, metrics, interval, and VCF tools;
 - `CreateSequenceDictionary` creates a valid sequence dictionary from a tiny
   FASTA;
 - `FastqToSam` and `SamToFastq` round-trip a tiny FASTQ through BAM;
 - `MeanQualityByCycle` produces metrics and a PDF chart, exercising the
-  bundled R runtime.
+  bundled R runtime;
+- `SamFormatConverter` writes a tiny CRAM 3.1 file and `ValidateSamFile` reads
+  it back using a local reference.
 
 ## Upstream
 
 - Source: <https://github.com/broadinstitute/picard>
 - Website: <https://broadinstitute.github.io/picard/>
-- Release: <https://github.com/broadinstitute/picard/releases/tag/3.4.0>
-- Download: <https://github.com/broadinstitute/picard/releases/download/3.4.0/picard.jar>
+- Release: <https://github.com/broadinstitute/picard/releases/tag/3.5.0>
+- Download: <https://github.com/broadinstitute/picard/releases/download/3.5.0/picard.jar>
 - License: MIT
 - Citation: "Picard Toolkit." 2019. Broad Institute, GitHub Repository.
   <https://broadinstitute.github.io/picard/>; Broad Institute. Upstream also

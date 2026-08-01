@@ -1,6 +1,6 @@
-taf-picard 3.4.0-r1
+taf-picard 3.5.0-r1
 
-TAFFISH wrapper for Picard 3.4.0, the Broad Institute Java toolkit for
+TAFFISH wrapper for Picard 3.5.0, the Broad Institute Java toolkit for
 manipulating HTS formats such as FASTQ, SAM, BAM, CRAM, and VCF.
 
 Usage:
@@ -52,6 +52,9 @@ Common workflows:
   Sort a SAM/BAM/CRAM file:
     taf-picard picard SortSam I=in.bam O=sorted.bam SORT_ORDER=coordinate
 
+  Convert between SAM/BAM/CRAM formats:
+    taf-picard picard SamFormatConverter I=in.bam O=out.cram R=reference.fa
+
   Mark duplicates:
     taf-picard picard MarkDuplicates I=sorted.bam O=marked.bam M=metrics.txt
 
@@ -59,7 +62,7 @@ Common workflows:
     taf-picard picard MeanQualityByCycle I=reads.bam O=quality.txt CHART_OUTPUT=quality.pdf
 
 Packaged commands:
-  picard       Official Picard 3.4.0 jar launcher.
+  picard       Official Picard 3.5.0 jar launcher.
   java         OpenJDK 17 runtime required by Picard 3.x.
   Rscript      R runtime used by Picard chart/metrics tools.
 
@@ -70,6 +73,10 @@ Runtime notes:
 
   Use Picard's own TMP_DIR=path argument for large sorts and duplicate marking.
   Use JAVA_TOOL_OPTIONS for advanced JVM flags when needed.
+
+  Picard 3.5.0 writes CRAM 3.1 by default. CRAM-3.0-only readers cannot read
+  these outputs. Check downstream compatibility; use an explicit converter
+  such as taf-samtools with -O cram,version=3.0 when CRAM 3.0 is required.
 
 Platform:
   The image is built for native linux/amd64 and linux/arm64. Picard is a Java
@@ -82,3 +89,7 @@ Boundaries:
   chain files, Illumina run folders, cloudJar/picardcloud.jar, or Google Cloud
   provider configuration. Tools that require those inputs or services still
   need user-supplied local files or a separate upstream environment.
+
+  Upstream removed direct .sra input in Picard 3.5.0. Convert SRA data to FASTQ
+  with taf-sra-tools first. GAR/cloud-provider and credential workflows are not
+  covered by the offline smoke suite.
